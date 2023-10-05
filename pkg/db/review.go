@@ -9,7 +9,7 @@ import (
 
 func InitReviewDB() {
 	driver := "sqlite3"
-	dataSource := "./review.db"
+	dataSource := "./db/review.db"
 	initStatement := `
 		CREATE TABLE IF NOT EXISTS
 		review (
