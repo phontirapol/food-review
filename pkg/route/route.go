@@ -8,11 +8,15 @@ import (
 	"food-review/pkg/template"
 )
 
-func Index(w http.ResponseWriter, r *http.Request) {
+type Handler struct {
+	Template template.Templater
+}
+
+func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "hello world")
 }
 
-func GetAllReviews(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetAllReviews(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 
 	allReviews, err := model.GetAllReviews()
@@ -22,7 +26,7 @@ func GetAllReviews(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = template.ExecuteTemplate(w, "reviews.html", allReviews)
+	err = h.Template.ExecuteTemplate(w, "reviews.html", allReviews)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))

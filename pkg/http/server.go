@@ -6,21 +6,28 @@ import (
 	"net/http"
 
 	"food-review/pkg/route"
+	"food-review/pkg/template"
 
 	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
 )
 
-func initNewRouter() *mux.Router {
+func initNewRouter(tmpl *template.Template) *mux.Router {
 	newRouter := mux.NewRouter()
-	newRouter.HandleFunc("/", route.Index).Methods("GET")
-	newRouter.HandleFunc("/reviews", route.GetAllReviews).Methods("GET")
+	var templater template.Templater = tmpl
+
+	handler := &route.Handler{
+		Template: templater,
+	}
+
+	newRouter.HandleFunc("/", handler.Index).Methods("GET")
+	newRouter.HandleFunc("/reviews", handler.GetAllReviews).Methods("GET")
 
 	return newRouter
 }
 
-func StartServer() {
-	newRouter := initNewRouter()
+func StartServer(tmpl *template.Template) {
+	newRouter := initNewRouter(tmpl)
 	http.Handle("/", newRouter)
 
 	fmt.Println("Someone has entered your website")

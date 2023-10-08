@@ -8,10 +8,11 @@ import (
 )
 
 func main() {
-	err := template.LoadTemplates("template/*.html")
+	tmpl := &template.Template{}
+	err := tmpl.LoadTemplates("template/*.html")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	http.StartServer()
+	http.StartServer(tmpl)
 }
