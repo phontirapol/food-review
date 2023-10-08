@@ -7,7 +7,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func InitReviewDB() {
+func InitReviewDB() *ReviewDB {
 	driver := "sqlite3"
 	dataSource := "./db/review.db"
 	initStatement := `
@@ -27,6 +27,8 @@ func InitReviewDB() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	return db
 }
 
 type ReviewDB struct {
@@ -49,4 +51,8 @@ func (db *ReviewDB) Init() error {
 	}
 
 	return nil
+}
+
+func (db *ReviewDB) GetDB() *sql.DB {
+	return db.Database
 }
