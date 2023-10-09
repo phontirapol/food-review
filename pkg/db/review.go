@@ -31,6 +31,10 @@ func InitReviewDB() *ReviewDB {
 	return db
 }
 
+type ReviewDBOpener interface {
+	GetDB() *sql.DB
+}
+
 type ReviewDB struct {
 	Driver        string
 	DataSource    string

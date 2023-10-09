@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"food-review/pkg/db"
 	"food-review/pkg/route"
 	"food-review/pkg/template"
 
@@ -21,8 +22,12 @@ func initNewRouter() *mux.Router {
 	}
 	var templater template.Templater = tmpl
 
+	reviewDB := db.InitReviewDB()
+	var reviewDBOpener db.ReviewDBOpener = reviewDB
+
 	handler := &route.Handler{
 		Template: templater,
+		ReviewDB: reviewDBOpener,
 	}
 
 	newRouter.HandleFunc("/", handler.Index).Methods("GET")
