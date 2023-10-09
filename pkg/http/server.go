@@ -12,8 +12,13 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func initNewRouter(tmpl *template.Template) *mux.Router {
+func initNewRouter() *mux.Router {
 	newRouter := mux.NewRouter()
+
+	tmpl := &template.Template{}
+	if err := tmpl.LoadTemplates("template/*.html"); err != nil {
+		log.Fatal(err)
+	}
 	var templater template.Templater = tmpl
 
 	handler := &route.Handler{
@@ -26,8 +31,8 @@ func initNewRouter(tmpl *template.Template) *mux.Router {
 	return newRouter
 }
 
-func StartServer(tmpl *template.Template) {
-	newRouter := initNewRouter(tmpl)
+func StartServer() {
+	newRouter := initNewRouter()
 	http.Handle("/", newRouter)
 
 	fmt.Println("Someone has entered your website")
