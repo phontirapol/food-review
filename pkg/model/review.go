@@ -2,8 +2,6 @@ package model
 
 import (
 	"database/sql"
-
-	"food-review/pkg/db"
 )
 
 type Review struct {
@@ -11,13 +9,11 @@ type Review struct {
 	Content string `json:"review"`
 }
 
-func GetAllReviews() ([]Review, error) {
+func GetAllReviews(db *sql.DB) ([]Review, error) {
 	var allReviews []Review
 
-	db := db.InitReviewDB()
-
 	statement := "SELECT review_id, review FROM review"
-	rows, err := db.Database.Query(statement)
+	rows, err := db.Query(statement)
 	if err == sql.ErrNoRows {
 		return nil, err
 	}
@@ -25,14 +21,10 @@ func GetAllReviews() ([]Review, error) {
 
 	for rows.Next() {
 		review := Review{}
-		err = rows.Scan(
+		_ = rows.Scan(
 			&review.ID,
 			&review.Content,
 		)
-		if err != nil {
-			return nil, err
-		}
-
 		allReviews = append(allReviews, review)
 	}
 
