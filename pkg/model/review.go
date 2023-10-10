@@ -9,8 +9,8 @@ type Review struct {
 	Content string `json:"review"`
 }
 
-func GetAllReviews(db *sql.DB) ([]Review, error) {
-	var allReviews []Review
+func GetAllReviews(db *sql.DB) ([]*Review, error) {
+	var allReviews []*Review
 
 	statement := "SELECT review_id, review FROM review"
 	rows, err := db.Query(statement)
@@ -25,7 +25,7 @@ func GetAllReviews(db *sql.DB) ([]Review, error) {
 			&review.ID,
 			&review.Content,
 		)
-		allReviews = append(allReviews, review)
+		allReviews = append(allReviews, &review)
 	}
 
 	return allReviews, nil

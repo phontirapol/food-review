@@ -49,3 +49,42 @@ func TestGetAllReviews(t *testing.T) {
 		}
 	})
 }
+
+func TestGetReview(t *testing.T) {
+	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+	if err != nil {
+		t.Error(err)
+	}
+
+	statement := "SELECT review_id, review FROM review WHERE review_id = ?"
+
+	t.Run("No Review Found", func(t *testing.T) {
+		var id uint = 0
+
+		mock.ExpectQuery(statement).
+			WithArgs(id).
+			WillReturnError(sql.ErrNoRows)
+
+		review, err := model.GetReview(db, id)
+		if assert.Error(t, err) {
+			assert.Nil(t, review)
+		}
+	})
+
+	t.Run("Happy Path", func(t *testing.T) {
+		var id uint = 1
+		var content string = "Gordan Ramsey is crying"
+
+		mockRow := sqlmock.NewRows([]string{"review_id", "review"}).
+			AddRow(id, content)
+
+		mock.ExpectQuery(statement).
+			WithArgs(id).
+			WillReturnRows(mockRow)
+
+		review, err := model.GetReview(db, id)
+		if assert.NoError(t, err) {
+			assert.Equal(t, content, review.Content)
+		}
+	})
+}
