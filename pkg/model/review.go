@@ -30,3 +30,16 @@ func GetAllReviews(db *sql.DB) ([]Review, error) {
 
 	return allReviews, nil
 }
+
+func GetReview(db *sql.DB, reviewID uint) (*Review, error) {
+	review := Review{}
+
+	statement := "SELECT review_id, review FROM review WHERE review_id = ?"
+	row := db.QueryRow(statement, reviewID)
+	err := row.Scan(&review.ID, &review.Content)
+	if err == sql.ErrNoRows {
+		return nil, err
+	}
+
+	return &review, nil
+}

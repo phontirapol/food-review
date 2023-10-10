@@ -32,6 +32,7 @@ func initNewRouter() *mux.Router {
 
 	newRouter.HandleFunc("/", handler.Index).Methods("GET")
 	newRouter.HandleFunc("/reviews", handler.GetAllReviews).Methods("GET")
+	newRouter.HandleFunc("/reviews/{reviewID}", handler.GetReview).Methods("GET")
 
 	return newRouter
 }
