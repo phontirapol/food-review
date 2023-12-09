@@ -46,16 +46,16 @@ func (h *Handler) GetReview(w http.ResponseWriter, r *http.Request) {
 	reviewIDstr := mux.Vars(r)["reviewID"]
 	reviewIDu64, err := strconv.ParseUint(reviewIDstr, 10, 32)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Invalid ID"))
 		return
 	}
 
 	db := h.ReviewDB.GetDB()
 	targetReview, err := model.GetReview(db, uint(reviewIDu64))
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		w.Write([]byte("No Review with this ID"))
 		return
 	}
 
