@@ -1,6 +1,7 @@
 package route
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -60,6 +61,30 @@ func (h *Handler) GetReview(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = h.Template.ExecuteTemplate(w, "review.html", targetReview)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+}
+
+func (h *Handler) GetReviewsByKeyword(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+
+	reviewKeyword := r.URL.Query().Get("query")
+	db := h.ReviewDB.GetDB()
+	targetReviews, err := model.GetReviewsByKeyword(db, reviewKeyword)
+	if err == sql.ErrNoRows {
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		w.Write([]byte("No review you are looking for"))
+		return
+	} else if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	err = h.Template.ExecuteTemplate(w, "reviews.html", targetReviews)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))

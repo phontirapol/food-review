@@ -43,3 +43,30 @@ func GetReview(db *sql.DB, reviewID uint) (*Review, error) {
 
 	return &review, nil
 }
+
+func GetReviewsByKeyword(db *sql.DB, keyword string) ([]*Review, error) {
+	var targetReviews []*Review
+
+	statement := "SELECT review_id, review FROM review WHERE review LIKE '%" + keyword + "%'"
+	rows, err := db.Query(statement)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		review := Review{}
+		_ = rows.Scan(
+			&review.ID,
+			&review.Content,
+		)
+
+		targetReviews = append(targetReviews, &review)
+	}
+
+	if len(targetReviews) == 0 {
+		return nil, sql.ErrNoRows
+	}
+
+	return targetReviews, nil
+}

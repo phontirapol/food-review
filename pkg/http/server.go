@@ -30,9 +30,15 @@ func initNewRouter() *mux.Router {
 		ReviewDB: reviewDBOpener,
 	}
 
-	newRouter.HandleFunc("/", handler.Index).Methods("GET")
-	newRouter.HandleFunc("/reviews", handler.GetAllReviews).Methods("GET")
-	newRouter.HandleFunc("/reviews/{reviewID}", handler.GetReview).Methods("GET")
+	newRouter.HandleFunc("/", handler.Index).
+		Methods("GET")
+	newRouter.HandleFunc("/reviews", handler.GetReviewsByKeyword).
+		Queries("query", "{keyword}").
+		Methods("GET")
+	newRouter.HandleFunc("/reviews", handler.GetAllReviews).
+		Methods("GET")
+	newRouter.HandleFunc("/reviews/{reviewID}", handler.GetReview).
+		Methods("GET")
 
 	return newRouter
 }
