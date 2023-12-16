@@ -7,6 +7,7 @@ import (
 type Review struct {
 	ID      uint   `json:"review_id"`
 	Content string `json:"review"`
+	Keyword string
 }
 
 func GetAllReviews(db *sql.DB) ([]*Review, error) {
@@ -60,6 +61,7 @@ func GetReviewsByKeyword(db *sql.DB, keyword string) ([]*Review, error) {
 			&review.ID,
 			&review.Content,
 		)
+		review.Keyword = keyword
 
 		targetReviews = append(targetReviews, &review)
 	}

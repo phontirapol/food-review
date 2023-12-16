@@ -84,7 +84,7 @@ func (h *Handler) GetReviewsByKeyword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.Template.ExecuteTemplate(w, "reviews.html", targetReviews)
+	err = h.Template.ExecuteTemplate(w, "reviews_keyword.html", targetReviews)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
