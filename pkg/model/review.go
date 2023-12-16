@@ -72,3 +72,18 @@ func GetReviewsByKeyword(db *sql.DB, keyword string) ([]*Review, error) {
 
 	return targetReviews, nil
 }
+
+func KeywordExists(db *sql.DB, keyword string) (bool, error) {
+	var foodKey string
+	statement := "SELECT keyword FROM dictionary WHERE keyword = ?"
+	row := db.QueryRow(statement, keyword)
+	err := row.Scan(&foodKey)
+
+	if err == sql.ErrNoRows {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}

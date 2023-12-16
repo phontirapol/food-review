@@ -14,8 +14,9 @@ import (
 )
 
 type Handler struct {
-	Template template.Templater
-	ReviewDB db.ReviewDBOpener
+	Template     template.Templater
+	ReviewDB     db.ReviewDBOpener
+	DictionaryDB db.DictionaryDBOpener
 }
 
 func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
@@ -72,6 +73,20 @@ func (h *Handler) GetReviewsByKeyword(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 
 	reviewKeyword := r.URL.Query().Get("query")
+	dict := h.DictionaryDB.GetDB()
+	exist, err := model.KeywordExists(dict, reviewKeyword)
+	if !exist {
+		if err == nil {
+			w.WriteHeader(http.StatusUnprocessableEntity)
+			w.Write([]byte("Keyword not in dictionary"))
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+		}
+
+		return
+	}
+
 	db := h.ReviewDB.GetDB()
 	targetReviews, err := model.GetReviewsByKeyword(db, reviewKeyword)
 	if err == sql.ErrNoRows {
