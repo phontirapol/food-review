@@ -140,3 +140,54 @@ func TestGetReviewsByKeyword(t *testing.T) {
 		}
 	})
 }
+
+func TestKeywordExists(t *testing.T) {
+	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+	if err != nil {
+		t.Error(err)
+	}
+
+	statement := "SELECT keyword FROM dictionary WHERE keyword = ?"
+
+	t.Run("Keyword Not Present in Dict", func(t *testing.T) {
+		keyword := "tasty cockroach"
+
+		mock.ExpectQuery(statement).
+			WillReturnError(sql.ErrNoRows)
+
+		exist, err := model.KeywordExists(db, keyword)
+
+		if assert.NoError(t, err) {
+			assert.False(t, exist)
+		}
+	})
+
+	t.Run("Other Error", func(t *testing.T) {
+		keyword := "duck ass"
+		errMsg := "Non-sql.ErrNoRows error"
+
+		mock.ExpectQuery(statement).
+			WillReturnError(errors.New(errMsg))
+
+		exist, err := model.KeywordExists(db, keyword)
+
+		if assert.Error(t, err) {
+			assert.EqualError(t, err, errMsg)
+			assert.False(t, exist)
+		}
+	})
+
+	t.Run("Happy Path", func(t *testing.T) {
+		keyword := "matcha hojicha"
+
+		mockRow := sqlmock.NewRows([]string{"keyword"}).AddRow("mathca hojicha")
+		mock.ExpectQuery(statement).
+			WillReturnRows(mockRow)
+
+		exist, err := model.KeywordExists(db, keyword)
+
+		if assert.NoError(t, err) {
+			assert.True(t, exist)
+		}
+	})
+}
