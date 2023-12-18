@@ -24,15 +24,24 @@ func initNewRouter() *mux.Router {
 
 	reviewDB := db.InitReviewDB()
 	var reviewDBOpener db.ReviewDBOpener = reviewDB
+	dictionaryDB := db.InitDictionaryDB()
+	var dictionaryDBOpener db.DictionaryDBOpener = dictionaryDB
 
 	handler := &route.Handler{
-		Template: templater,
-		ReviewDB: reviewDBOpener,
+		Template:     templater,
+		ReviewDB:     reviewDBOpener,
+		DictionaryDB: dictionaryDBOpener,
 	}
 
-	newRouter.HandleFunc("/", handler.Index).Methods("GET")
-	newRouter.HandleFunc("/reviews", handler.GetAllReviews).Methods("GET")
-	newRouter.HandleFunc("/reviews/{reviewID}", handler.GetReview).Methods("GET")
+	newRouter.HandleFunc("/", handler.Index).
+		Methods("GET")
+	newRouter.HandleFunc("/reviews", handler.GetReviewsByKeyword).
+		Queries("query", "{keyword}").
+		Methods("GET")
+	newRouter.HandleFunc("/reviews", handler.GetAllReviews).
+		Methods("GET")
+	newRouter.HandleFunc("/reviews/{reviewID}", handler.GetReview).
+		Methods("GET")
 
 	return newRouter
 }

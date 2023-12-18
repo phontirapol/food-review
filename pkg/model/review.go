@@ -7,6 +7,7 @@ import (
 type Review struct {
 	ID      uint   `json:"review_id"`
 	Content string `json:"review"`
+	Keyword string
 }
 
 func GetAllReviews(db *sql.DB) ([]*Review, error) {
@@ -42,4 +43,47 @@ func GetReview(db *sql.DB, reviewID uint) (*Review, error) {
 	}
 
 	return &review, nil
+}
+
+func GetReviewsByKeyword(db *sql.DB, keyword string) ([]*Review, error) {
+	var targetReviews []*Review
+
+	statement := "SELECT review_id, review FROM review WHERE review LIKE '%" + keyword + "%'"
+	rows, err := db.Query(statement)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		review := Review{}
+		_ = rows.Scan(
+			&review.ID,
+			&review.Content,
+		)
+		review.Keyword = keyword
+
+		targetReviews = append(targetReviews, &review)
+	}
+
+	if len(targetReviews) == 0 {
+		return nil, sql.ErrNoRows
+	}
+
+	return targetReviews, nil
+}
+
+func KeywordExists(db *sql.DB, keyword string) (bool, error) {
+	var foodKey string
+	statement := "SELECT keyword FROM dictionary WHERE keyword = ?"
+	row := db.QueryRow(statement, keyword)
+	err := row.Scan(&foodKey)
+
+	if err == sql.ErrNoRows {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }

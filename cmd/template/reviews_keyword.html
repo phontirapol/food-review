@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reviews with Searched Keyword</title>
+</head>
+<body>
+    {{ range . }}
+    <div>
+        <h3>{{ .ID }}</h3>
+        <p id="review-{{ .ID }}">{{ .Content }}</p>
+    </div>
+    {{ end }}
+
+    {{ range . }}
+    <script>
+        function highlightKeyword(elementId, keyword) {
+            var contentElement = document.getElementById(elementId);
+            var content = contentElement.innerHTML;
+            var highlightedContent = content.replace(new RegExp(keyword, 'gi'), function (match) {
+                return '<span style="background-color: yellow;">' + match + '</span>';
+            });
+            contentElement.innerHTML = highlightedContent;
+        }
+
+        highlightKeyword("review-{{ .ID }}", "{{ .Keyword }}");
+    </script>
+    {{ end }}
+</body>
+</html>
