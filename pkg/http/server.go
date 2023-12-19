@@ -42,6 +42,8 @@ func initNewRouter() *mux.Router {
 		Methods("GET")
 	newRouter.HandleFunc("/reviews/{reviewID}", handler.GetReview).
 		Methods("GET")
+	newRouter.HandleFunc("/reviews/{reviewID}/edit", handler.AccessReviewEdit).
+		Methods("GET")
 
 	return newRouter
 }
