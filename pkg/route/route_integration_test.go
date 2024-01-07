@@ -6,12 +6,17 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
+
+	"sync"
 
 	"food-review/pkg/route"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gorilla/mux"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -333,5 +338,78 @@ func TestGetReviewsByKeywordIntegrationService(t *testing.T) {
 
 		url := "/reviews?query=" + foodKeyword
 		testHandler(t, mockHandler.GetReviewsByKeyword, GET, url, nil, nil, http.StatusOK)
+	})
+}
+
+func TestEditReviewConcurrency(t *testing.T) {
+	t.Run("Update Remains Concurrent", func(t *testing.T) {
+		dbRev, mockRev, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		if err != nil {
+			t.Error(err)
+		}
+
+		mockTmpl := &mockTemplate{errMsg: nil}
+		mockDictDB := &mockDictionaryDB{Database: nil}
+
+		mockRev.ExpectBegin().
+			WillReturnError(nil)
+
+		mockRev.ExpectPrepare("UPDATE review SET review = ? WHERE review_id = ?").
+			ExpectExec().
+			WithArgs().
+			WillReturnError(nil)
+
+		mockRev.ExpectCommit().
+			WillReturnError(nil)
+
+		mockRevDB := &mockReviewDB{Database: dbRev}
+		mockHandler := constructHandler(mockTmpl, mockRevDB, mockDictDB)
+
+		bodyContents := []string{
+			`
+			{
+				"review_id": "1",
+				"review": "This is great"
+			}
+			`,
+			`
+			{
+				"review_id": "1",
+				"review": "This is bad"
+			}
+			`,
+		}
+
+		wg := sync.WaitGroup{}
+		mu := sync.Mutex{}
+		completionTime := []time.Time{}
+
+		for _, body := range bodyContents {
+			wg.Add(1)
+
+			go func(body string) {
+				defer wg.Done()
+
+				r, err := http.NewRequest(http.MethodPut, "/reviews", strings.NewReader(body))
+				if err != nil {
+					t.Error(err)
+				}
+
+				vars := map[string]string{"reviewID": "1"}
+				r = mux.SetURLVars(r, vars)
+
+				w := httptest.NewRecorder()
+				handler := http.HandlerFunc(mockHandler.EditReview)
+				handler.ServeHTTP(w, r)
+
+				mu.Lock()
+				defer mu.Unlock()
+				completionTime = append(completionTime, time.Now())
+			}(body)
+		}
+
+		wg.Wait()
+
+		assert.True(t, completionTime[1].After(completionTime[0]))
 	})
 }
