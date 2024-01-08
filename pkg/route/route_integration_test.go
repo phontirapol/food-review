@@ -6,16 +6,22 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
+
+	"sync"
 
 	"food-review/pkg/route"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gorilla/mux"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
 	GET string = http.MethodGet
+	PUT string = http.MethodPut
 )
 
 type mockTemplate struct {
@@ -333,5 +339,150 @@ func TestGetReviewsByKeywordIntegrationService(t *testing.T) {
 
 		url := "/reviews?query=" + foodKeyword
 		testHandler(t, mockHandler.GetReviewsByKeyword, GET, url, nil, nil, http.StatusOK)
+	})
+}
+
+func TestAccessReviewEditIntegrationService(t *testing.T) {
+	url := "/reviews/"
+	suffix := "/edit"
+
+	mockDB, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+	if err != nil {
+		t.Fatalf("error not expected while opening mock db, %v", err)
+	}
+	statement := "SELECT review_id, review FROM review WHERE review_id = ?"
+
+	t.Run("Invalid ID", func(t *testing.T) {
+		testSuite := []string{
+			"-1",
+			"1.2",
+			"abc",
+			"1/1",
+		}
+
+		for _, testCase := range testSuite {
+			mockTmpl := &mockTemplate{errMsg: nil}
+
+			mockHandler := constructHandler(mockTmpl, nil, nil)
+
+			vars := map[string]string{"reviewID": testCase}
+			testHandler(t, mockHandler.AccessReviewEdit, GET, url+testCase+suffix, nil, vars, http.StatusBadRequest)
+		}
+	})
+
+	t.Run("No Review with this ID", func(t *testing.T) {
+		mockTmpl := &mockTemplate{errMsg: nil}
+
+		mock.ExpectQuery(statement).WillReturnError(sql.ErrNoRows)
+
+		mockRDB := &mockReviewDB{Database: mockDB}
+
+		mockHandler := constructHandler(mockTmpl, mockRDB, nil)
+
+		id := "9999999"
+		vars := map[string]string{"reviewID": id}
+		testHandler(t, mockHandler.AccessReviewEdit, GET, url+id+suffix, nil, vars, http.StatusUnprocessableEntity)
+	})
+
+	t.Run("Error in Template", func(t *testing.T) {
+		mockTmpl := &mockTemplate{errMsg: errors.New("Some error in template")}
+
+		mockRow := sqlmock.NewRows([]string{"review_id", "review"}).
+			AddRow("1", "This restaurant deserves 9 Michelin stars")
+		mock.ExpectQuery(statement).WillReturnRows(mockRow)
+		mockRDB := &mockReviewDB{Database: mockDB}
+
+		mockHandler := constructHandler(mockTmpl, mockRDB, nil)
+
+		id := "1"
+		vars := map[string]string{"reviewID": id}
+		testHandler(t, mockHandler.AccessReviewEdit, GET, url+id+suffix, nil, vars, http.StatusInternalServerError)
+	})
+
+	t.Run("Happy Path", func(t *testing.T) {
+		mockTmpl := &mockTemplate{errMsg: nil}
+
+		mockRow := sqlmock.NewRows([]string{"review_id", "review"}).
+			AddRow("1", "This restaurant deserves 9 Michelin stars")
+		mock.ExpectQuery(statement).WillReturnRows(mockRow)
+		mockRDB := &mockReviewDB{Database: mockDB}
+
+		mockHandler := constructHandler(mockTmpl, mockRDB, nil)
+
+		id := "1"
+		vars := map[string]string{"reviewID": id}
+		testHandler(t, mockHandler.AccessReviewEdit, GET, url+id+suffix, nil, vars, http.StatusOK)
+	})
+}
+
+func TestEditReviewConcurrency(t *testing.T) {
+	t.Run("Update Remains Concurrent", func(t *testing.T) {
+		dbRev, mockRev, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+		if err != nil {
+			t.Error(err)
+		}
+
+		mockTmpl := &mockTemplate{errMsg: nil}
+		mockDictDB := &mockDictionaryDB{Database: nil}
+
+		mockRev.ExpectBegin()
+
+		mockRev.ExpectPrepare("UPDATE review SET review = ? WHERE review_id = ?").
+			ExpectExec().
+			WithArgs("This is great", uint(1)).
+			WillReturnResult(sqlmock.NewResult(1, 1))
+
+		mockRev.ExpectCommit().
+			WillReturnError(nil)
+
+		mockRevDB := &mockReviewDB{Database: dbRev}
+		mockHandler := constructHandler(mockTmpl, mockRevDB, mockDictDB)
+
+		bodyContents := []string{
+			`
+			{
+				"review_id": 1,
+				"review": "This is great"
+			}
+			`,
+			`
+			{
+				"review_id": 1,
+				"review": "This is bad"
+			}
+			`,
+		}
+
+		wg := sync.WaitGroup{}
+		mu := sync.Mutex{}
+		completionTime := []time.Time{}
+
+		for _, body := range bodyContents {
+			wg.Add(1)
+
+			go func(body string) {
+				defer wg.Done()
+
+				r, err := http.NewRequest(http.MethodPut, "/reviews", strings.NewReader(body))
+				if err != nil {
+					t.Error(err)
+				}
+
+				vars := map[string]string{"reviewID": "1"}
+				r = mux.SetURLVars(r, vars)
+
+				w := httptest.NewRecorder()
+				handler := http.HandlerFunc(mockHandler.EditReview)
+				handler.ServeHTTP(w, r)
+
+				mu.Lock()
+				defer mu.Unlock()
+				completionTime = append(completionTime, time.Now())
+			}(body)
+		}
+
+		wg.Wait()
+
+		assert.True(t, completionTime[1].After(completionTime[0]))
 	})
 }

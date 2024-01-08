@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit</title>
+</head>
+<body>
+    <h1>Edit your review #{{ .ID }}</h1>
+    <div>
+        <div>
+            <form id="review-form" onsubmit="sendPUT()">
+                <label for="content">Content:</label><br>
+                <textarea name="content" id="" cols="30" rows="10">{{ .Content }}</textarea><br><br>
+                <button type="submit">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function sendPUT() {
+            let url = "/reviews/{{ .ID }}"
+
+            let payload = {
+                review: document.getElementsByName("content")[0].value
+            }
+
+            let options = {
+                method: "PUT",
+                body: JSON.stringify(payload)
+            }
+
+            fetch(url, options)
+            .then(response => console.log(response.status))
+
+            document.getElementById("review-form").action = url
+            document.getElementById("review-form").method = "GET"
+        }
+    </script>
+</body>
+</html>

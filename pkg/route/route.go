@@ -3,6 +3,7 @@ package route
 import (
 	"database/sql"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 
@@ -100,6 +101,54 @@ func (h *Handler) GetReviewsByKeyword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = h.Template.ExecuteTemplate(w, "reviews_keyword.html", targetReviews)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+}
+
+func (h *Handler) AccessReviewEdit(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+
+	reviewIDstr := mux.Vars(r)["reviewID"]
+	reviewIDu64, err := strconv.ParseUint(reviewIDstr, 10, 32)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Invalid ID"))
+		return
+	}
+
+	db := h.ReviewDB.GetDB()
+	targetReview, err := model.GetReview(db, uint(reviewIDu64))
+	if err != nil {
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		w.Write([]byte("No Review with this ID"))
+		return
+	}
+
+	err = h.Template.ExecuteTemplate(w, "edit.html", targetReview)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+}
+
+func (h *Handler) EditReview(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+
+	reviewIDstr := mux.Vars(r)["reviewID"]
+	reviewIDu64, err := strconv.ParseUint(reviewIDstr, 10, 32)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Invalid ID"))
+		return
+	}
+
+	reviewBody, _ := ioutil.ReadAll(r.Body)
+	db := h.ReviewDB.GetDB()
+	err = model.UpdateReview(db, uint(reviewIDu64), reviewBody)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))

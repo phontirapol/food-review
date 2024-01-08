@@ -2,6 +2,7 @@ package model
 
 import (
 	"database/sql"
+	"encoding/json"
 )
 
 type Review struct {
@@ -86,4 +87,37 @@ func KeywordExists(db *sql.DB, keyword string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func UpdateReview(db *sql.DB, reviewID uint, reviewBody []byte) error {
+	editedReview := Review{ID: reviewID}
+
+	err := json.Unmarshal(reviewBody, &editedReview)
+	if err != nil {
+		return err
+	}
+
+	ps, err := db.Begin()
+	if err != nil {
+		return err
+	}
+
+	updateStatement := "UPDATE review SET review = ? WHERE review_id = ?"
+	statement, err := db.Prepare(updateStatement)
+	if err != nil {
+		return err
+	}
+	defer statement.Close()
+
+	_, err = statement.Exec(editedReview.Content, editedReview.ID)
+	if err != nil {
+		return err
+	}
+
+	err = ps.Commit()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
