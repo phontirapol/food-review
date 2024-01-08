@@ -191,3 +191,106 @@ func TestKeywordExists(t *testing.T) {
 		}
 	})
 }
+
+func TestUpdateReview(t *testing.T) {
+	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+	if err != nil {
+		t.Error(err)
+	}
+
+	t.Run("JSON Incorrect Data Type", func(t *testing.T) {
+		var reviewID uint = 1
+		reviewBody := []byte(`{"review": true}`)
+
+		err := model.UpdateReview(db, reviewID, reviewBody)
+		expectedError := "cannot unmarshal bool"
+
+		if assert.Error(t, err) {
+			assert.ErrorContains(t, err, expectedError)
+		}
+	})
+
+	t.Run("Transaction Begin Problem", func(t *testing.T) {
+		var reviewID uint = 1
+		reviewBody := []byte(`{"review": "This restaurant sucks"}`)
+
+		err := model.UpdateReview(db, reviewID, reviewBody)
+		expectedError := "call to database transaction Begin was not expected"
+
+		if assert.Error(t, err) {
+			assert.ErrorContains(t, err, expectedError)
+		}
+	})
+
+	t.Run("Transaction Prepare Problem", func(t *testing.T) {
+		var reviewID uint = 1
+		reviewBody := []byte(`{"review": "This restaurant sucks"}`)
+
+		mock.ExpectBegin()
+
+		err := model.UpdateReview(db, reviewID, reviewBody)
+		expectedError := "query was not expected"
+
+		if assert.Error(t, err) {
+			assert.ErrorContains(t, err, expectedError)
+		}
+	})
+
+	t.Run("Transaction Exec Problem", func(t *testing.T) {
+		var reviewID uint = 1
+		reviewBody := []byte(`{"review": "This restaurant sucks"}`)
+
+		mock.ExpectBegin()
+
+		mock.ExpectPrepare("UPDATE review SET review = ? WHERE review_id = ?")
+
+		err := model.UpdateReview(db, reviewID, reviewBody)
+		expectedError := "was not expected"
+
+		if assert.Error(t, err) {
+			assert.ErrorContains(t, err, expectedError)
+		}
+	})
+
+	t.Run("Transaction Commit Problem", func(t *testing.T) {
+		var reviewID uint = 1
+		content := "This restaurant sucks"
+		reviewBody := []byte(`{"review": "This restaurant sucks"}`)
+
+		mock.ExpectBegin()
+
+		mock.ExpectPrepare("UPDATE review SET review = ? WHERE review_id = ?").
+			ExpectExec().
+			WithArgs(content, reviewID).
+			WillReturnResult(sqlmock.NewResult(1, 1))
+
+		err := model.UpdateReview(db, reviewID, reviewBody)
+		expectedError := "was not expected"
+
+		if assert.Error(t, err) {
+			assert.ErrorContains(t, err, expectedError)
+		}
+	})
+
+	t.Run("Happy Path", func(t *testing.T) {
+		var reviewID uint = 1
+		content := "This restaurant sucks"
+		reviewBody := []byte(`{"review": "This restaurant sucks"}`)
+
+		mock.ExpectBegin()
+
+		mock.ExpectPrepare("UPDATE review SET review = ? WHERE review_id = ?").
+			ExpectExec().
+			WithArgs(content, reviewID).
+			WillReturnResult(sqlmock.NewResult(1, 1))
+
+		mock.ExpectCommit().
+			WillReturnError(nil)
+
+		err := model.UpdateReview(db, reviewID, reviewBody)
+
+		if assert.NoError(t, err) {
+			assert.Nil(t, err)
+		}
+	})
+}
