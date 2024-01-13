@@ -56,7 +56,7 @@ func StartServer() {
 
 	fmt.Println("Someone has entered your website")
 
-	err := http.ListenAndServe(":8080", context.ClearHandler(http.DefaultServeMux))
+	err := http.ListenAndServe(":5555", context.ClearHandler(http.DefaultServeMux))
 	if err != nil {
 		log.Fatal(err)
 	}
