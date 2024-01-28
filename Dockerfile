@@ -17,14 +17,14 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o food-review ./cmd
+RUN go build -o main ./cmd
 
 # =====================  Main Stage =====================
 FROM alpine:3.16
 
 COPY /cmd/ .
 COPY /pkg/ .
-COPY --from=builder /app/food-review .
+COPY --from=builder /app/ .
 
 EXPOSE 5555
-CMD ["./food-review"]
+CMD ["./main"]
